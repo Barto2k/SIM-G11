@@ -69,6 +69,10 @@ export default function App() {
   };
 
   const calculateHistogram = async (numbers) => {
+    if (!numbers || numbers.length === 0) {
+      setError('No hay números para calcular el histograma');
+      return;
+    }
     try {
       const response = await fetch(`${API_URL}/histogram`, {
         method: 'POST',
@@ -127,6 +131,7 @@ export default function App() {
                 </label>
                 <input
                   type="number"
+                  placeholder="Tamaño de la muestra"
                   className="block w-full h-11 px-5 py-2.5 bg-white leading-7 text-base font-normal shadow-xs text-gray-900 bg-transparent border border-gray-300 rounded-full placeholder-gray-400 focus:outline-none"
                   value={sampleSize}
                   onChange={(e) => setSampleSize(parseInt(e.target.value))}
@@ -248,7 +253,25 @@ export default function App() {
           <div className="mt-6 flex justify-center">
             <button
               className="w-52 h-12 bg-indigo-600 hover:bg-indigo-800 transition-all duration-300 rounded-full shadow-xs text-white text-base font-semibold leading-6 mb-2"
-              onClick={handleGenerateNumbers}
+              onClick={() => {
+                if (sampleSize <= 0) {
+                  setError('El tamaño de la muestra debe ser mayor a 0.');
+                  return;
+                }
+                if (distribution === 'exponential' && exponentialParams.lambda <= 0) {
+                  setError('Lambda (λ) debe ser mayor a 0.');
+                  return;
+                }
+                if (distribution === 'normal' && normalParams.stdDev <= 0) {
+                  setError('La desviación estándar (σ) debe ser mayor a 0.');
+                  return;
+                }
+                if (distribution === 'uniform' && uniformParams.a >= uniformParams.b) {
+                  setError('El valor mínimo (a) no puede ser mayor o igual al valor máximo (b).');
+                  return;
+                }
+                handleGenerateNumbers();
+              }}
               disabled={loading}
             >
               {loading ? 'Generando...' : 'Generar números aleatorios'}
