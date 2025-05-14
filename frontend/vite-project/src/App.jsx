@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { LineChart, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Bar, BarChart } from 'recharts';
+import GoodnessTestInterface from './GoodnessTestInterface.jsx';
+
 
 const API_URL = 'http://localhost:5000/api';
 
 export default function App() {
-
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [distribution, setDistribution] = useState('uniform');
@@ -15,11 +16,14 @@ export default function App() {
   const [numBins, setNumBins] = useState(10);
   const [randomNumbers, setRandomNumbers] = useState([]);
   const [histogramData, setHistogramData] = useState(null);
+  const [goodnessTest, setGoodnessTest] = useState('chi-square');
+  const [testResults, setTestResults] = useState(null);
 
   const handleGenerateNumbers = async () => {
     try {
       setLoading(true);
       setError(null);
+      setTestResults(null);
 
       let requestParams = {
         distribution,
@@ -98,10 +102,84 @@ export default function App() {
     }
   };
 
+  const currentParams =
+  distribution === 'uniform'
+    ? uniformParams
+    : distribution === 'exponential'
+    ? exponentialParams
+    : distribution === 'normal'
+    ? normalParams
+    : {};
+
+  const performGoodnessTest = async () => {
+    if (!randomNumbers || randomNumbers.length === 0) {
+      setError('No hay números generados para realizar la prueba');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      let endpoint = '';
+      if (goodnessTest === 'chi-square') {
+        endpoint = '/chi-square-test';
+      } else if (goodnessTest === 'ks') {
+        endpoint = '/ks-test';
+      }
+
+      let requestParams = {
+        random_numbers: randomNumbers,
+        distribution: distribution,
+        num_bins: numBins
+      };
+
+      // Agregar parámetros según la distribución
+      switch (distribution) {
+        case 'uniform':
+          requestParams = { ...requestParams, ...uniformParams };
+          break;
+        case 'exponential':
+          requestParams = { ...requestParams, lambda: exponentialParams.lambda };
+          break;
+        case 'normal':
+          requestParams = {
+            ...requestParams,
+            mean: normalParams.mean,
+            std_dev: normalParams.stdDev
+          };
+          break;
+        default:
+          break;
+      }
+
+      const response = await fetch(`${API_URL}${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestParams),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Error al realizar la prueba de bondad');
+      }
+
+      setTestResults(data);
+
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-100 p-8 flex items-center justify-center">
       <div className="max-w-6xl mx-auto bg-gray-50 p-8 rounded-2xl shadow-lg">
-        <h1 className="text-3xl font-bold mb-8 text-center text-gray-800 ">
+        <h1 className="text-3xl font-bold mb-8 text-center text-gray-800">
           Generador de Números Aleatorios
         </h1>
 
@@ -250,7 +328,7 @@ export default function App() {
             </div>
           </div>
 
-          <div className="mt-6 flex justify-center">
+          <div className="mt-6 flex justify-center gap-4">
             <button
               className="w-52 h-12 bg-indigo-600 hover:bg-indigo-800 transition-all duration-300 rounded-full shadow-xs text-white text-base font-semibold leading-6 mb-2"
               onClick={() => {
@@ -276,6 +354,16 @@ export default function App() {
             >
               {loading ? 'Generando...' : 'Generar números aleatorios'}
             </button>
+
+            {randomNumbers.length > 0 && (
+              <button
+                className="w-52 h-12 bg-green-600 hover:bg-green-800 transition-all duration-300 rounded-full shadow-xs text-white text-base font-semibold leading-6 mb-2"
+                onClick={performGoodnessTest}
+                disabled={loading}
+              >
+                {loading ? 'Calculando...' : 'Realizar prueba de bondad'}
+              </button>
+            )}
           </div>
 
           {error && (
@@ -302,7 +390,7 @@ export default function App() {
         )}
 
         {histogramData && (
-          <div className="bg-white p-8 rounded-2xl shadow-sm mb-8 ">
+          <div className="bg-white p-8 rounded-2xl shadow-sm mb-8">
             <h2 className="text-xl font-semibold mb-6 text-gray-700">Histograma de frecuencias</h2>
 
             <div className="overflow-x-auto">
@@ -359,9 +447,14 @@ export default function App() {
                 </tbody>
               </table>
             </div>
-
           </div>
         )}
+
+        <GoodnessTestInterface
+          randomNumbers={randomNumbers}
+          distribution={distribution}
+          distributionParams={currentParams}
+        />
       </div>
     </div>
   );
