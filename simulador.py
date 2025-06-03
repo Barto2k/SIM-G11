@@ -191,34 +191,31 @@ class SimuladorCertificados:
         """Procesa el fin de servicio de una terminal"""
         terminal = self.terminales[terminal_id - 1]
         estudiante = self.estudiantes[terminal.estudiante_id]
-
+        
         # Calcular tiempo de espera
         tiempo_espera = estudiante.hora_inicio_servicio - estudiante.hora_llegada
         self.acum_tiempo_espera += tiempo_espera
         self.estudiantes_atendidos += 1
-
+        
         # Liberar terminal
         terminal.estado = 'L'
         terminal.estudiante_id = None
         terminal.fin_servicio = None
-
+        
         # Remover estudiante del sistema
         del self.estudiantes[estudiante.id]
-
-        # --- PRIORIDAD DEL TÉCNICO ---
-        # Si el técnico está disponible y la terminal recién liberada está pendiente de revisión, iniciar revisión
-        if (self.tecnico.estado == 'D' and
-            hasattr(self, 'terminales_pendientes_revision') and
-            terminal.id in self.terminales_pendientes_revision):
-            self.iniciar_revision_proxima_terminal()
-            return  # El técnico tiene prioridad, no asignar estudiante
-
+        
         # Asignar siguiente estudiante SOLO a la terminal recién liberada
         if self.cola_estudiantes:
             if terminal.estado == 'L' and (self.tecnico.estado != 'R' or self.tecnico.terminal_revisando != terminal.id):
                 siguiente_id = self.cola_estudiantes[0]
                 siguiente_estudiante = self.estudiantes[siguiente_id]
                 self.asignar_estudiante_terminal(siguiente_estudiante, terminal)
+        # Si el técnico está disponible y la terminal recién liberada está pendiente de revisión, iniciar revisión
+        if (self.tecnico.estado == 'D' and
+            hasattr(self, 'terminales_pendientes_revision') and
+            terminal.id in self.terminales_pendientes_revision):
+            self.iniciar_revision_proxima_terminal()
 
     def procesar_inicio_ronda_tecnico(self):
         """Procesa el inicio de una ronda del técnico"""
@@ -240,7 +237,7 @@ class SimuladorCertificados:
             self.agregar_evento(self.tecnico.proxima_ronda, 'inicio_ronda')
             return
 
-        # Busca la próxima terminal pendiente (en orden) que esté libre
+        # Busca la próxima terminal pendiente que esté libre
         for terminal_id in self.terminales_pendientes_revision:
             terminal = self.terminales[terminal_id - 1]
             if terminal.estado == 'L':
