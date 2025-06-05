@@ -12,56 +12,66 @@ class SimuladorApp(tk.Tk):
         super().__init__()
         self.title("Simulador Sistema Autogestión Certificados")
         self.geometry("1100x650")
-        self.simulador = None
-        self.resultados = None
+        self.simulador = None  # Instancia del simulador, se inicializa al ejecutar la simulación
+        self.resultados = None  # Resultados de la simulación
 
         # --- Parámetros de simulación configurables por el usuario ---
         frame_params = ttk.LabelFrame(self, text="Parámetros de Simulación")
         frame_params.pack(fill="x", padx=10, pady=5)
 
+        # Tiempo de simulación (en minutos)
         ttk.Label(frame_params, text="Tiempo de simulación (min):").grid(row=0, column=0, padx=5, pady=5)
-        self.tiempo_sim_var = tk.DoubleVar(value=120.0)
+        self.tiempo_sim_var = tk.DoubleVar(value=120.0)  # Valor inicial por defecto
         ttk.Entry(frame_params, textvariable=self.tiempo_sim_var, width=10).grid(row=0, column=1, padx=5, pady=5)
 
+        # Iteración desde la cual mostrar resultados
         ttk.Label(frame_params, text="Desde iteración:").grid(row=0, column=2, padx=5, pady=5)
-        self.desde_iter_var = tk.IntVar(value=0)
+        self.desde_iter_var = tk.IntVar(value=0)  # Valor inicial por defecto
         ttk.Entry(frame_params, textvariable=self.desde_iter_var, width=6).grid(row=0, column=3, padx=5, pady=5)
 
         # --- Parámetros del modelo (solo los configurables) ---
+        # Servicio mínimo y máximo
         ttk.Label(frame_params, text="Servicio min:").grid(row=1, column=0, padx=5, pady=2)
-        self.servicio_min = tk.DoubleVar(value=5)
+        self.servicio_min = tk.DoubleVar(value=5)  # Valor inicial por defecto
         ttk.Entry(frame_params, textvariable=self.servicio_min, width=6).grid(row=1, column=1, padx=5, pady=2)
         ttk.Label(frame_params, text="Servicio max:").grid(row=1, column=2, padx=5, pady=2)
-        self.servicio_max = tk.DoubleVar(value=8)
+        self.servicio_max = tk.DoubleVar(value=8)  # Valor inicial por defecto
         ttk.Entry(frame_params, textvariable=self.servicio_max, width=6).grid(row=1, column=3, padx=5, pady=2)
 
+        # Revisión mínima y máxima
         ttk.Label(frame_params, text="Revisión min:").grid(row=1, column=4, padx=5, pady=2)
-        self.revision_min = tk.DoubleVar(value=3)
+        self.revision_min = tk.DoubleVar(value=3)  # Valor inicial por defecto
         ttk.Entry(frame_params, textvariable=self.revision_min, width=6).grid(row=1, column=5, padx=5, pady=2)
         ttk.Label(frame_params, text="Revisión max:").grid(row=1, column=6, padx=5, pady=2)
-        self.revision_max = tk.DoubleVar(value=10)
+        self.revision_max = tk.DoubleVar(value=10)  # Valor inicial por defecto
         ttk.Entry(frame_params, textvariable=self.revision_max, width=6).grid(row=1, column=7, padx=5, pady=2)
 
+        # Ronda mínima y máxima
         ttk.Label(frame_params, text="Ronda min:").grid(row=2, column=0, padx=5, pady=2)
-        self.ronda_min = tk.DoubleVar(value=57)
+        self.ronda_min = tk.DoubleVar(value=57)  # Valor inicial por defecto
         ttk.Entry(frame_params, textvariable=self.ronda_min, width=6).grid(row=2, column=1, padx=5, pady=2)
         ttk.Label(frame_params, text="Ronda max:").grid(row=2, column=2, padx=5, pady=2)
-        self.ronda_max = tk.DoubleVar(value=63)
+        self.ronda_max = tk.DoubleVar(value=63)  # Valor inicial por defecto
         ttk.Entry(frame_params, textvariable=self.ronda_max, width=6).grid(row=2, column=3, padx=5, pady=2)
 
+        # Media de llegada de estudiantes
         ttk.Label(frame_params, text="Media llegada:").grid(row=2, column=4, padx=5, pady=2)
-        self.media_llegada = tk.DoubleVar(value=2)
+        self.media_llegada = tk.DoubleVar(value=2)  # Valor inicial por defecto
         ttk.Entry(frame_params, textvariable=self.media_llegada, width=6).grid(row=2, column=5, padx=5, pady=2)
 
         # --- Parámetros fijos (no editables) ---
+        # Estos valores son constantes y no pueden ser modificados por el usuario
         ttk.Label(frame_params, text="Máx. en cola: 5 (fijo)").grid(row=2, column=6, padx=5, pady=2)
         ttk.Label(frame_params, text="Tiempo regreso: 30 (fijo)").grid(row=2, column=7, padx=5, pady=2)
 
+        # Botón para ejecutar la simulación
         ttk.Button(frame_params, text="Ejecutar Simulación", command=self.ejecutar_simulacion).grid(row=0, column=8, rowspan=2, padx=10, pady=5)
 
         # --- Resumen de resultados ---
         self.frame_resumen = ttk.LabelFrame(self, text="Resumen de Resultados")
         self.frame_resumen.pack(fill="x", padx=10, pady=5)
+
+        # Variables para mostrar los resultados principales de la simulación
         self.resumen_vars = [tk.StringVar() for _ in range(6)]
         for i, label in enumerate(["Iteraciones", "Tiempo final", "Atendidos", "Retirados", "% Retiros", "Prom. espera"]):
             ttk.Label(self.frame_resumen, text=label + ":").grid(row=0, column=2*i, padx=5, pady=2, sticky="e")
@@ -71,6 +81,7 @@ class SimuladorApp(tk.Tk):
         self.frame_vector = ttk.LabelFrame(self, text="Vector de Estados (detalle extendido)")
         self.frame_vector.pack(fill="both", expand=True, padx=10, pady=5)
 
+        # Scrollbars para la tabla principal
         self.tree_scroll_y = ttk.Scrollbar(self.frame_vector, orient="vertical")
         self.tree_scroll_y.pack(side="right", fill="y")
         self.tree_scroll_x = ttk.Scrollbar(self.frame_vector, orient="horizontal")
