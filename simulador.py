@@ -284,8 +284,8 @@ class SimuladorCertificados:
             'acum_tiempo_espera': self.acum_tiempo_espera,
             'tiempo_promedio_espera': tiempo_promedio_espera,
             'rnd_usados': self.rnd_usados.copy(),
-            'demora_revision': getattr(self, 'demora_revision', [None]*4),
-            'fin_revision': getattr(self, 'fin_revision', [None]*4)
+            'demora_revision': list(getattr(self, 'demora_revision', [None]*4)),
+            'fin_revision': list(getattr(self, 'fin_revision', [None]*4))
         }
 
         self.vector_estados.append(estado)

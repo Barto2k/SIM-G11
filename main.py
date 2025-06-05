@@ -252,13 +252,13 @@ class SimuladorApp(tk.Tk):
                             if prev_rnd_rev not in [None, ""] and prev_fin_rev == fin_rev:
                                 mostrar = True
                                 break
-                    if mostrar:
+                    if mostrar and estado['reloj'] < fin_rev:
                         t_rev_rnd.append("-")
                         t_rev_fin.append(f"{fin_rev:.2f}")
                     else:
                         t_rev_rnd.append("-")
                         t_rev_fin.append("-")
-
+            
             # --- Acumuladores y métricas ---
             acum_retirados = estado['estudiantes_retirados']
             acum_atendidos = estado['estudiantes_atendidos']
