@@ -151,20 +151,47 @@ class SimuladorApp(tk.Tk):
         Solo permite hasta 100000 iteraciones o hasta el tiempo indicado.
         """
         try:
-            tiempo_sim = self.tiempo_sim_var.get()
+            # --- Validaciones ---
+            servicio_min = self.servicio_min.get()
+            servicio_max = self.servicio_max.get()
+            revision_min = self.revision_min.get()
+            revision_max = self.revision_max.get()
+            ronda_min = self.ronda_min.get()
+            ronda_max = self.ronda_max.get()
+            media_llegada = self.media_llegada.get()
             desde_iter = self.desde_iter_var.get()
-            # Crear el simulador con los parámetros configurables
+            tiempo_sim = self.tiempo_sim_var.get()
+
+            if servicio_min < 0 or servicio_max <= 0 or servicio_min >= servicio_max:
+                messagebox.showerror("Error de validación", "Servicio mínimo debe ser >= 0 y menor que servicio máximo, ambos positivos.")
+                return
+            if revision_min < 0 or revision_max <= 0 or revision_min >= revision_max:
+                messagebox.showerror("Error de validación", "Revisión mínima debe ser >= 0 y menor que revisión máxima, ambos positivos.")
+                return
+            if ronda_min < 0 or ronda_max <= 0 or ronda_min >= ronda_max:
+                messagebox.showerror("Error de validación", "Ronda mínima debe ser >= 0 y menor que ronda máxima, ambos positivos.")
+                return
+            if media_llegada <= 0:
+                messagebox.showerror("Error de validación", "La media de llegada debe ser un valor positivo.")
+                return
+            if desde_iter < 0:
+                messagebox.showerror("Error de validación", "El campo 'Desde iteración' debe ser mayor o igual a 0.")
+                return
+            if tiempo_sim <= 0:
+                messagebox.showerror("Error de validación", "El tiempo de simulación debe ser mayor a 0.")
+                return
+
+            # --- Si todo es válido, ejecutar simulación ---
             self.simulador = SimuladorCertificados(
-                servicio_min=self.servicio_min.get(),
-                servicio_max=self.servicio_max.get(),
-                revision_min=self.revision_min.get(),
-                revision_max=self.revision_max.get(),
-                ronda_min=self.ronda_min.get(),
-                ronda_max=self.ronda_max.get(),
-                media_llegada=self.media_llegada.get()
+                servicio_min=servicio_min,
+                servicio_max=servicio_max,
+                revision_min=revision_min,
+                revision_max=revision_max,
+                ronda_min=ronda_min,
+                ronda_max=ronda_max,
+                media_llegada=media_llegada
             )
             random.seed(42)
-            # Ejecutar simulación con máximo 100000 iteraciones
             self.resultados = self.simulador.simular(tiempo_simulacion=tiempo_sim, max_iteraciones=100000)
             self.mostrar_resumen()
             self.mostrar_vector_estados(desde_iter)
