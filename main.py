@@ -112,15 +112,15 @@ class SimuladorApp(tk.Tk):
             "RND", "Próxima llegada", "Estado Técnico",
             "Estado T1", "Estado T2", "Estado T3", "Estado T4", "Cola",
             # Terminales servicio
-            "RND T1", "RND T2",
-            "RND T3", "RND T4",
-            "Fin de servicio T1", "Fin de servicio T2",
-            "Fin de servicio T3", "Fin de servicio T4",
+            "RND T1", "Fin de servicio T1",
+            "RND T2", "Fin de servicio T2",
+            "RND T3", "Fin de servicio T3",
+            "RND T4", "Fin de servicio T4",
             # Terminales revisión
-            "RND", "Fin de revisión",
-            "RND", "Fin de revisión",
-            "RND", "Fin de revisión",
-            "RND", "Fin de revisión",
+            "RND", "Fin de revisión T1",
+            "RND", "Fin de revisión T2",
+            "RND", "Fin de revisión T3",
+            "RND", "Fin de revisión T4",
             # Acumuladores y métricas
             "Est. retiran/regresan", "Est. atendidos", "% retiran/regresan", "Acum. espera", "Prom. espera"
         ]
@@ -228,15 +228,42 @@ class SimuladorApp(tk.Tk):
                 t_serv_fin.append(f"{fin_serv:.2f}" if fin_serv not in [None, ""] else "-")
                 # Revisión
                 rnd_rev = estado['rnd_usados'].get(f'revision_{j+1}', None)
-                t_rev_rnd.append(f"{rnd_rev:.4f}" if rnd_rev not in [None, ""] else "-")
-                fin_rev = estado.get('fin_revision', [None]*4)[j] if 'fin_revision' in estado else None
-                t_rev_fin.append(f"{fin_rev:.2f}" if fin_rev not in [None, ""] else "-")
+                fin_revs = estado.get('fin_revision', [None]*4)
+                fin_rev = fin_revs[j] if j < len(fin_revs) else None
+
+                # Mostrar t_rev_rnd y t_rev_fin desde que aparece el rnd hasta que el reloj alcance fin_rev
+                if rnd_rev not in [None, ""]:
+                    t_rev_rnd.append(f"{rnd_rev:.4f}")
+                    if fin_rev not in [None, ""]:
+                        t_rev_fin.append(f"{fin_rev:.2f}")
+                    else:
+                        t_rev_fin.append("-")
+                else:
+                    # Si ya apareció el rnd_rev en una iteración anterior y el reloj actual < fin_rev, seguir mostrando fin_rev
+                    # Para esto, buscamos hacia atrás en el vector de estados si hubo un rnd_rev para este terminal y si el fin_rev es el mismo
+                    mostrar = False
+                    if fin_rev not in [None, ""] and estado['reloj'] < fin_rev:
+                        # Buscar si hubo un rnd_rev para este terminal con este fin_rev en una iteración anterior
+                        for k in range(i-1, -1, -1):
+                            prev_estado = vector[k]
+                            prev_rnd_rev = prev_estado['rnd_usados'].get(f'revision_{j+1}', None)
+                            prev_fin_revs = prev_estado.get('fin_revision', [None]*4)
+                            prev_fin_rev = prev_fin_revs[j] if j < len(prev_fin_revs) else None
+                            if prev_rnd_rev not in [None, ""] and prev_fin_rev == fin_rev:
+                                mostrar = True
+                                break
+                    if mostrar:
+                        t_rev_rnd.append("-")
+                        t_rev_fin.append(f"{fin_rev:.2f}")
+                    else:
+                        t_rev_rnd.append("-")
+                        t_rev_fin.append("-")
 
             # --- Acumuladores y métricas ---
             acum_retirados = estado['estudiantes_retirados']
             acum_atendidos = estado['estudiantes_atendidos']
             porc_retirados = f"{estado['porcentaje_retiros']:.2f}"
-            acum_espera = f"{getattr(self.simulador, 'acum_tiempo_espera', 0):.2f}"
+            acum_espera = f"{estado.get('acum_tiempo_espera', 0):.2f}"
             prom_espera = f"{estado['tiempo_promedio_espera']:.2f}"
 
             row = [
@@ -244,8 +271,14 @@ class SimuladorApp(tk.Tk):
                 rnd_llegada, prox_llegada,
                 rnd_ronda, prox_ronda, tec_estado,
                 *t_estados, cola,
-                *t_serv_rnd, *t_serv_fin,
-                *t_rev_rnd, *t_rev_fin,
+                t_serv_rnd[0], t_serv_fin[0],
+                t_serv_rnd[1], t_serv_fin[1],
+                t_serv_rnd[2], t_serv_fin[2],
+                t_serv_rnd[3], t_serv_fin[3],
+                t_rev_rnd[0], t_rev_fin[0],
+                t_rev_rnd[1], t_rev_fin[1],
+                t_rev_rnd[2], t_rev_fin[2],
+                t_rev_rnd[3], t_rev_fin[3],
                 acum_retirados, acum_atendidos, porc_retirados, acum_espera, prom_espera
             ]
             self.tree.insert("", "end", iid=str(i), values=row)

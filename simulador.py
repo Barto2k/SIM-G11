@@ -281,6 +281,7 @@ class SimuladorCertificados:
             'estudiantes_atendidos': self.estudiantes_atendidos,
             'estudiantes_retirados': self.estudiantes_retirados,
             'porcentaje_retiros': porcentaje_retiros,
+            'acum_tiempo_espera': self.acum_tiempo_espera,
             'tiempo_promedio_espera': tiempo_promedio_espera,
             'rnd_usados': self.rnd_usados.copy(),
             'demora_revision': getattr(self, 'demora_revision', [None]*4),
@@ -361,7 +362,7 @@ class SimuladorCertificados:
             'estudiantes_atendidos': self.estudiantes_atendidos,
             'estudiantes_retirados': self.estudiantes_retirados,
             'porcentaje_retiros': porcentaje_retiros,
-            'tiempo_promedio_espera': tiempo_promedio_espera
+            'tiempo_promedio_espera': tiempo_promedio_espera,
         }
 
     def mostrar_vector_estados(self, desde_iteracion: int = 0, 
