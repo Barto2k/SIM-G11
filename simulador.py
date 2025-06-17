@@ -262,20 +262,21 @@ class SimuladorCertificados:
         if self.estudiantes_atendidos > 0:
             tiempo_promedio_espera = self.acum_tiempo_espera / self.estudiantes_atendidos
         
+        # Agregar clave 'estudiantes' al estado actual
+        estudiantes_estado = {}
+        for estudiante_id, estudiante in self.estudiantes.items():
+            estudiantes_estado[estudiante_id] = {
+                'estado': estudiante.estado,
+                'hora_llegada': estudiante.hora_llegada,
+                'terminal_asignada': estudiante.terminal_asignada
+            }
+
         estado = {
             'reloj': self.reloj,
             'evento': evento.tipo,
             'proximos_eventos': '; '.join(proximos_eventos) if proximos_eventos else '',
             'tecnico': estado_tecnico,
-            # Estado de terminales
-            'terminales': [
-                {
-                    'estado': terminal.estado,
-                    'fin_servicio': terminal.fin_servicio or '',
-                    'estudiante_id': terminal.estudiante_id or ''
-                }
-                for terminal in self.terminales
-            ],
+            'terminales': estados_terminales,
             'cola_length': len(self.cola_estudiantes),
             'estudiantes_sistema': len(self.estudiantes),
             'estudiantes_atendidos': self.estudiantes_atendidos,
@@ -284,8 +285,7 @@ class SimuladorCertificados:
             'acum_tiempo_espera': self.acum_tiempo_espera,
             'tiempo_promedio_espera': tiempo_promedio_espera,
             'rnd_usados': self.rnd_usados.copy(),
-            'demora_revision': list(getattr(self, 'demora_revision', [None]*4)),
-            'fin_revision': list(getattr(self, 'fin_revision', [None]*4))
+            'estudiantes': estudiantes_estado  # Clave agregada
         }
 
         self.vector_estados.append(estado)

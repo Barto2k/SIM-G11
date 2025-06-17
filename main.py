@@ -122,7 +122,7 @@ class SimuladorApp(tk.Tk):
             "RND", "Fin de revisión T3",
             "RND", "Fin de revisión T4",
             # Acumuladores y métricas
-            "Est. retiran/regresan", "Est. atendidos", "% retiran/regresan", "Acum. espera", "Prom. espera"
+            "Est. retirados", "Est. atendidos", "% retiros", "Acum. espera", "Prom. espera"
         ]
 
         self.tree = ttk.Treeview(
@@ -221,6 +221,60 @@ class SimuladorApp(tk.Tk):
         vector = self.resultados['vector_estados']
         inicio = int(desde_iter)
         fin = len(vector)
+
+        # Crear un mapeo entre columnas y estudiantes
+        estudiantes_columnas = {}  # Diccionario: estudiante_id -> columna
+        columnas_disponibles = [f"estudiante_{i+1}" for i in range(60)]  # Máximo de 40 columnas disponibles
+
+        # Actualizar las columnas del Treeview
+        columns = [
+            "evento", "reloj",  # Tipo Evento, Reloj
+            "rnd_llegada", "prox_llegada",  # Estudiante
+            "rnd_ronda", "prox_ronda", "tec_estado",  # Técnico
+            "t1_estado", "t2_estado", "t3_estado", "t4_estado", "cola",  # Terminales y cola
+            # Terminales servicio
+            "t1_rnd_serv", "t1_fin_serv",
+            "t2_rnd_serv", "t2_fin_serv",
+            "t3_rnd_serv", "t3_fin_serv",
+            "t4_rnd_serv", "t4_fin_serv",
+            # Terminales revisión
+            "t1_rnd_rev", "t1_fin_rev",
+            "t2_rnd_rev", "t2_fin_rev",
+            "t3_rnd_rev", "t3_fin_rev",
+            "t4_rnd_rev", "t4_fin_rev",
+            # Acumuladores y métricas
+            "acum_retirados", "acum_atendidos", "porc_retirados", "acum_espera", "prom_espera"
+        ]
+
+        headers = [
+            "Tipo Evento", "Reloj",
+            "RND", "Próxima llegada",
+            "RND", "Próxima llegada", "Estado Técnico",
+            "Estado T1", "Estado T2", "Estado T3", "Estado T4", "Cola",
+            # Terminales servicio
+            "RND T1", "Fin de servicio T1",
+            "RND T2", "Fin de servicio T2",
+            "RND T3", "Fin de servicio T3",
+            "RND T4", "Fin de servicio T4",
+            # Terminales revisión
+            "RND", "Fin de revisión T1",
+            "RND", "Fin de revisión T2",
+            "RND", "Fin de revisión T3",
+            "RND", "Fin de revisión T4",
+            # Acumuladores y métricas
+            "Est. retirados", "Est. atendidos", "% retiros", "Acum. espera", "Prom. espera"
+        ]
+
+        # Agregar encabezados dinámicos para estudiantes
+        columns.extend(columnas_disponibles)
+        headers.extend([f"Estudiante {i+1}" for i in range(60)])
+
+        self.tree["columns"] = columns
+        for c, h in zip(columns, headers):
+            self.tree.heading(c, text=h)
+            self.tree.column(c, width=100)
+
+        # Mostrar los estados en la tabla
         for i in range(inicio, fin):
             estado = vector[i]
             # --- Evento y reloj ---
@@ -230,7 +284,6 @@ class SimuladorApp(tk.Tk):
             # --- Llegadas ---
             rnd_llegada = estado['rnd_usados'].get('llegada_estudiante', "")
             prox_llegada = ""
-            # Buscar próximo evento de llegada
             for ev in estado['proximos_eventos'].split(";"):
                 if "llegada_estudiante" in ev:
                     prox_llegada = ev.split("@")[1] if "@" in ev else ""
@@ -248,44 +301,16 @@ class SimuladorApp(tk.Tk):
             t_serv_rnd, t_serv_fin = [], []
             t_rev_rnd, t_rev_fin = [], []
             for j in range(4):
-                # Servicio
                 rnd_serv = estado['rnd_usados'].get(f'servicio_{j+1}', None)
                 t_serv_rnd.append(f"{rnd_serv:.4f}" if rnd_serv not in [None, ""] else "-")
                 fin_serv = estado['terminales'][j]['fin_servicio']
                 t_serv_fin.append(f"{fin_serv:.2f}" if fin_serv not in [None, ""] else "-")
-                # Revisión
                 rnd_rev = estado['rnd_usados'].get(f'revision_{j+1}', None)
                 fin_revs = estado.get('fin_revision', [None]*4)
                 fin_rev = fin_revs[j] if j < len(fin_revs) else None
+                t_rev_rnd.append(f"{rnd_rev:.4f}" if rnd_rev not in [None, ""] else "-")
+                t_rev_fin.append(f"{fin_rev:.2f}" if fin_rev not in [None, ""] else "-")
 
-                # Mostrar t_rev_rnd y t_rev_fin desde que aparece el rnd hasta que el reloj alcance fin_rev
-                if rnd_rev not in [None, ""]:
-                    t_rev_rnd.append(f"{rnd_rev:.4f}")
-                    if fin_rev not in [None, ""]:
-                        t_rev_fin.append(f"{fin_rev:.2f}")
-                    else:
-                        t_rev_fin.append("-")
-                else:
-                    # Si ya apareció el rnd_rev en una iteración anterior y el reloj actual < fin_rev, seguir mostrando fin_rev
-                    # Para esto, buscamos hacia atrás en el vector de estados si hubo un rnd_rev para este terminal y si el fin_rev es el mismo
-                    mostrar = False
-                    if fin_rev not in [None, ""] and estado['reloj'] < fin_rev:
-                        # Buscar si hubo un rnd_rev para este terminal con este fin_rev en una iteración anterior
-                        for k in range(i-1, -1, -1):
-                            prev_estado = vector[k]
-                            prev_rnd_rev = prev_estado['rnd_usados'].get(f'revision_{j+1}', None)
-                            prev_fin_revs = prev_estado.get('fin_revision', [None]*4)
-                            prev_fin_rev = prev_fin_revs[j] if j < len(prev_fin_revs) else None
-                            if prev_rnd_rev not in [None, ""] and prev_fin_rev == fin_rev:
-                                mostrar = True
-                                break
-                    if mostrar and estado['reloj'] < fin_rev:
-                        t_rev_rnd.append("-")
-                        t_rev_fin.append(f"{fin_rev:.2f}")
-                    else:
-                        t_rev_rnd.append("-")
-                        t_rev_fin.append("-")
-            
             # --- Acumuladores y métricas ---
             acum_retirados = estado['estudiantes_retirados']
             acum_atendidos = estado['estudiantes_atendidos']
@@ -293,6 +318,7 @@ class SimuladorApp(tk.Tk):
             acum_espera = f"{estado.get('acum_tiempo_espera', 0):.2f}"
             prom_espera = f"{estado['tiempo_promedio_espera']:.2f}"
 
+            # --- Estados de estudiantes ---
             row = [
                 evento, reloj,
                 rnd_llegada, prox_llegada,
@@ -306,9 +332,34 @@ class SimuladorApp(tk.Tk):
                 t_rev_rnd[1], t_rev_fin[1],
                 t_rev_rnd[2], t_rev_fin[2],
                 t_rev_rnd[3], t_rev_fin[3],
-                acum_retirados, acum_atendidos, porc_retirados, acum_espera, prom_espera
+                acum_atendidos, acum_retirados, porc_retirados, acum_espera, prom_espera
             ]
-            self.tree.insert("", "end", iid=str(i), values=row)
+
+            # Agregar estados de estudiantes a las columnas correspondientes
+            for col_name in columnas_disponibles:
+                if col_name in estudiantes_columnas.values():
+                    estudiante_id = next(
+                        (key for key, value in estudiantes_columnas.items() if value == col_name),
+                        None
+                    )
+                    if estudiante_id is not None and 'estudiantes' in estado and isinstance(estado['estudiantes'], dict):
+                        estado_estudiante = estado['estudiantes'].get(estudiante_id, {}).get('estado', "")
+                    else:
+                        estado_estudiante = ""
+                    row.append(estado_estudiante)
+                else:
+                    # Reutilizar columnas liberadas para nuevos estudiantes
+                    nuevo_estudiante = next(
+                        (key for key in estado['estudiantes'] if key not in estudiantes_columnas),
+                        None
+                    )
+                    if nuevo_estudiante:
+                        estudiantes_columnas[nuevo_estudiante] = col_name
+                        estado_estudiante = estado['estudiantes'].get(nuevo_estudiante, {}).get('estado', "")
+                        row.append(estado_estudiante)
+                    else:
+                        row.append("")  # Si no hay estudiante nuevo, dejar la columna vacía
+            self.tree.insert("", "end", iid=str(i), values=row)                    
 
     def mostrar_detalle_iteracion(self, event):
         """
